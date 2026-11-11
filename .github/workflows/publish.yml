@@ -1,0 +1,24 @@
+# Publishes to pub.dev when a version tag is pushed (e.g. v0.1.0).
+# One-time: pub.dev > package > Admin > Automated publishing > enable GitHub Actions,
+# repository bijithbijithintersmart/dynamic_notification_kit, tag pattern v{{version}}.
+name: Publish to pub.dev
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - uses: dart-lang/setup-dart@v1
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter pub publish --dry-run
+      - run: flutter pub publish --force

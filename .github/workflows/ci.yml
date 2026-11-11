@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
+      - name: Example app analyzes
+        working-directory: example
+        run: |
+          flutter pub get
+          flutter analyze
+      - run: dart run dynamic_notification_kit:setup --check --project example || true
+      - run: flutter pub publish --dry-run
+
+  pub-points:
+    name: Pub.dev package score (160/160)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install webp tools (pana converts screenshots to WebP)
+        run: sudo apt-get update && sudo apt-get install -y webp
+      - name: Install pana (pub.dev's package analyzer)
+        run: dart pub global activate pana
+      - name: Require full pub.dev score
+        run: |
+          dart pub global run pana --no-warning --json . > pub_score.json
+          python3 - <<'PY'
+          import json
+          r = json.load(open('pub_score.json'))['scores']
+          print(r)
+          assert r['grantedPoints'] == r['maxPoints'], f"{r['grantedPoints']}/{r['maxPoints']}"
+          PY
